@@ -1,4 +1,1 @@
-{
-  "z6-23134": [],
-  "z6-23133": []
-}
+{"z6-23134": [{"timestamp_utc": 1772696603, "datetime": "2026-03-05 07:43:23", "data": {"temperature": 22.9, "humidity": 65.0, "soil_temp": 21.3, "water_content": 0.56, "solar": 7.0, "ec": 1.084, "vpd": 1.36, "battery": 100.0}}], "z6-23133": [{"timestamp_utc": 1772696603, "datetime": "2026-03-05 07:43:23", "data": {"temperature": 20.3, "humidity": 65.0, "soil_temp": 19.3, "water_content": 0.398, "solar": 79.5, "ec": 1.711, "vpd": 1.2, "battery": 86.0}}]}
