@@ -14,6 +14,8 @@ const btnApply = document.getElementById('applyFilterBtn');
 const mobileNavToggle = document.getElementById('mobileNavToggle');
 const sidebar = document.querySelector('.sidebar');
 
+fetchWeather(); // Fetch weather on load
+
 if (mobileNavToggle) {
     mobileNavToggle.addEventListener('click', () => {
         sidebar.classList.toggle('active');
@@ -97,6 +99,7 @@ dSelect.addEventListener('change', () => {
     todayMinTemp = { val: 999, ts: null };
 
     fetchRealtimeData(true);
+    fetchWeather(); // Update weather when region changes
 
     // Auto-hide sidebar on mobile after selecting a device
     if (window.innerWidth <= 900 && sidebar.classList.contains('active')) {
@@ -109,6 +112,58 @@ const chartFilters = {
     chart1: { start: null, end: null },
     chart2: { start: null, end: null }
 };
+
+// Weather Fetching Logic (Open-Meteo API)
+const WEATHER_COORDS = {
+    "z6-23134": { lat: 34.57, lon: 126.60 }, // Haenam approximate
+    "z6-23133": { lat: 34.80, lon: 126.70 }  // Yeongam approximate
+};
+
+const WEATHER_CODES = {
+    0: { desc: "맑음", icon: "☀️" },
+    1: { desc: "대체로 맑음", icon: "🌤️" },
+    2: { desc: "구름조금", icon: "⛅" },
+    3: { desc: "흐림", icon: "☁️" },
+    45: { desc: "안개", icon: "🌫️" },
+    48: { desc: "짙은 안개", icon: "🌫️" },
+    51: { desc: "가벼운 이슬비", icon: "🌦️" },
+    53: { desc: "이슬비", icon: "🌧️" },
+    55: { desc: "강한 이슬비", icon: "🌧️" },
+    61: { desc: "가벼운 비", icon: "🌦️" },
+    63: { desc: "비", icon: "🌧️" },
+    65: { desc: "강한 비", icon: "⛈️" },
+    71: { desc: "가벼운 눈", icon: "🌨️" },
+    73: { desc: "눈", icon: "❄️" },
+    75: { desc: "강한 눈", icon: "❄️" },
+    95: { desc: "천둥번개", icon: "⛈️" }
+};
+
+async function fetchWeather() {
+    const deviceId = dSelect.value;
+    const coords = WEATHER_COORDS[deviceId];
+
+    if (!coords) return;
+
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FTokyo`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Weather fetch failed");
+
+        const data = await res.json();
+        const current = data.current;
+
+        const codeInfo = WEATHER_CODES[current.weather_code] || { desc: "알 수 없음", icon: "❓" };
+
+        document.getElementById('weatherTemp').textContent = `${current.temperature_2m.toFixed(1)}°C`;
+        document.getElementById('weatherHum').textContent = current.relative_humidity_2m;
+        document.getElementById('weatherDesc').textContent = codeInfo.desc;
+        document.getElementById('weatherIcon').textContent = codeInfo.icon;
+
+    } catch (error) {
+        console.error("Failed to load weather:", error);
+        document.getElementById('weatherDesc').textContent = "날씨 로딩 실패";
+    }
+}
 
 function getFilteredData(dataArray, filterState) {
     if (!filterState.start || !filterState.end) return dataArray;
@@ -210,9 +265,16 @@ function processDataPoint(payload) {
     const rh = calculateRH(d.temperature, d.vpd); // simplified dummy logic for RH
     const ppfd = d.solar !== undefined ? d.solar * 2.1 : undefined;
 
-    // Track min/max
-    if (d.temperature > todayMaxTemp.val) todayMaxTemp = { val: d.temperature, ts: dtStr };
-    if (d.temperature < todayMinTemp.val || todayMinTemp.val === 999) todayMinTemp = { val: d.temperature, ts: dtStr };
+    // Check if the data point is from TODAY (local time)
+    const todayStr = new Date().toLocaleDateString();
+    const pointDateStr = ts.toLocaleDateString();
+    const isToday = (todayStr === pointDateStr);
+
+    // Track min/max strictly for TODAY
+    if (isToday) {
+        if (d.temperature > todayMaxTemp.val) todayMaxTemp = { val: d.temperature, ts: dtStr };
+        if (d.temperature < todayMinTemp.val || todayMinTemp.val === 999) todayMinTemp = { val: d.temperature, ts: dtStr };
+    }
 
     // Update KPIs
     updateKpi(els.MaxTemp, todayMaxTemp, false, 1);

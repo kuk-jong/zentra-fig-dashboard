@@ -51,6 +51,22 @@
                     </div>
                 </div>
 
+                <!-- Weather Widget -->
+                <div class="weather-widget" id="weatherWidget"
+                    style="margin-top: 15px; margin-bottom: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 0.9rem; color: #48dbfb; margin-bottom: 8px; font-weight: 600;">⛅ 지역 실시간 날씨
+                        (현재)</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span id="weatherTemp" style="font-size: 1.8rem; font-weight: 700; color: #fff;">--°C</span>
+                        <span id="weatherIcon" style="font-size: 2rem;">☁️</span>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.85rem; color: #b2b5cc;">
+                        <span id="weatherDesc">날씨 정보 없음</span>
+                        <span>습도: <span id="weatherHum">--</span>%</span>
+                    </div>
+                </div>
+
                 <!-- Fetch Button & Date Picker removed from Sidebar -->
 
 
@@ -95,7 +111,11 @@
             </header>
 
             <div class="kpi-grid">
-                <!-- High/Low Cards -->
+                <!-- Top Row: Temp Variations -->
+                <div class="kpi-card highlight-card" style="border-left-color: #ff9f43;">
+                    <div class="kpi-header"><span class="kpi-title">현재 기온 (Current Temp)</span></div>
+                    <div class="kpi-value"><span id="valTemp">--</span><span class="kpi-unit">°C</span></div>
+                </div>
                 <div class="kpi-card highlight-card">
                     <div class="kpi-header"><span class="kpi-title">오늘 최고 기온 (Max Temp)</span></div>
                     <div class="kpi-value"><span id="valMaxTemp">--</span><span class="kpi-unit">°C</span></div>
@@ -105,11 +125,7 @@
                     <div class="kpi-value"><span id="valMinTemp">--</span><span class="kpi-unit">°C</span></div>
                 </div>
 
-                <!-- Row 1 -->
-                <div class="kpi-card">
-                    <div class="kpi-header"><span class="kpi-title">기온 (Air Temp)</span></div>
-                    <div class="kpi-value"><span id="valTemp">--</span><span class="kpi-unit">°C</span></div>
-                </div>
+                <!-- Row 2 -->
                 <div class="kpi-card">
                     <div class="kpi-header"><span class="kpi-title">상대습도 (Humidity)</span></div>
                     <div class="kpi-value"><span id="valHum">--</span><span class="kpi-unit">% 추정</span></div>
