@@ -14,6 +14,7 @@ DEVICE_MAP = {
 DATA_JSON_PATH = "data.json"
 MAX_HISTORY = 600
 
+# Get credentials from environment variables (GitHub Secrets)
 EMAIL = os.environ.get('ZENTRA_EMAIL')
 PASSWORD = os.environ.get('ZENTRA_PASSWORD')
 
@@ -25,11 +26,12 @@ def parse_val(text, label):
 
 def main():
     if not EMAIL or not PASSWORD:
-        print("Error: environment variables are missing.")
+        print("Error: ZENTRA_EMAIL or ZENTRA_PASSWORD environment variables are missing.")
         return
 
     print(f"Starting scrape at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
+    # Load existing data.json
     history_data = {}
     if os.path.exists(DATA_JSON_PATH):
         try:
@@ -41,7 +43,7 @@ def main():
     scraped_data_blocks = {}
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=True) # Must be headless for GitHub Actions
         context = browser.new_context(viewport={'width': 1280, 'height': 800})
         page = context.new_page()
 
@@ -51,44 +53,47 @@ def main():
         page.fill("input#password", PASSWORD)
         page.click("button[type='submit']")
         
-        # 1. 넉넉하게 15초 대기 (로그인 완료 기다림)
-        print("Logged in, waiting 15s...")
-        page.wait_for_timeout(15000)
+        print("Waiting for login to complete...")
+        page.wait_for_timeout(10000)
         
-        # 2. 오전에 성공했던 강제 리스트 클릭 방식 적용
-        print("Clicking dashboard_list...")
-        try:
-            page.evaluate("document.querySelector('button[data-hash=\"dashboard_list\"]').click()")
-        except Exception as e:
-            print("Could not click list button natively:", e)
-            page.goto("https://zentracloud.com/#/dashboard_list")
-
-        # 3. 데이터 로딩을 위해 또 15초 결제 대기
-        print("Waiting 15s for devices to load...")
+        print("Navigating to List view...")
+        page.goto("https://zentracloud.com/#/dashboard_list")
+        
+        # Wait a fixed amount for the dynamic list to render properly
         page.wait_for_timeout(15000)
 
-        # 4. 안전하게 요소 추출
-        blocks = page.locator(".station-status").all()
-        print(f"Found {len(blocks)} station blocks on the page.")
+        # 4. 안전하게 텍스트 요소 통째로 추출 (HTML 태그 클래스에 의존하지 않음)
+        inner_text = page.evaluate("document.body.innerText")
+        lines = inner_text.split('\n')
+        
+        temp_blocks = {}
+        current_device = None
+        for line in lines:
+            line = line.strip()
+            m = re.search(r'(z6-\d{5})', line, re.IGNORECASE)
+            if m:
+                current_device = m.group(1).upper()
+                if current_device not in temp_blocks:
+                    temp_blocks[current_device] = ""
+            
+            if current_device:
+                temp_blocks[current_device] += line + "\n"
 
-        for b in blocks:
-            text = b.inner_text()
-            header_match = re.search(r"(Z6-\d+)", text)
-            if header_match:
-                real_id = header_match.group(1)
-                if real_id in DEVICE_MAP:
-                    mapped_id = DEVICE_MAP[real_id]
-                    scraped_data_blocks[mapped_id] = text
+        for real_id, text in temp_blocks.items():
+            if real_id in DEVICE_MAP:
+                mapped_id = DEVICE_MAP[real_id]
+                scraped_data_blocks[mapped_id] = text
 
         browser.close()
 
     if not scraped_data_blocks:
-        print("No valid target devices found during scrape. Exiting WITHOUT save.")
+        print("No valid target devices found during scrape. Exiting.")
         return
 
     now_ts = int(time.time())
     dt_str = datetime.fromtimestamp(now_ts).strftime("%Y-%m-%d %H:%M:%S")
 
+    # Process and append data
     for dev_id, block in scraped_data_blocks.items():
         if dev_id not in history_data:
             history_data[dev_id] = []
