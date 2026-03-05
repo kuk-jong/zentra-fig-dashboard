@@ -2,7 +2,7 @@ import json
 import os
 import time
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 
 # Devices we care about mapping
@@ -92,7 +92,10 @@ def main():
         return
 
     now_ts = int(time.time())
-    dt_str = datetime.fromtimestamp(now_ts).strftime("%Y-%m-%d %H:%M:%S")
+    
+    # GitHub Actions servers use UTC. Add 9 hours for KST.
+    kst_time = datetime.fromtimestamp(now_ts) + timedelta(hours=9)
+    dt_str = kst_time.strftime("%Y-%m-%d %H:%M:%S")
 
     # Process and append data
     for dev_id, block in scraped_data_blocks.items():
