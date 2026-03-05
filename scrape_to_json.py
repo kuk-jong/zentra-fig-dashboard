@@ -54,7 +54,7 @@ def main():
         page.click("button[type='submit']")
         
         print("Waiting for login to complete...")
-        page.wait_for_selector(".dashboard-view", timeout=30000)
+        page.wait_for_timeout(10000)
         
         print("Navigating to List view...")
         page.goto("https://zentracloud.com/#/dashboard_list")
