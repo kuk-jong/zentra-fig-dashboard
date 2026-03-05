@@ -32,6 +32,14 @@ jobs:
           ZENTRA_PASSWORD: ${{ secrets.ZENTRA_PASSWORD }}
         run: python scrape_to_json.py
 
+      - name: Upload Debug Screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: debug_github.png
+          retention-days: 1
+
       - name: Commit and Push Changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
