@@ -424,20 +424,6 @@ const modal = document.getElementById('downloadModal');
 document.getElementById('navDownload').addEventListener('click', (e) => {
     e.preventDefault();
     modal.style.display = 'flex';
-
-    const today = new Date();
-    const past = new Date();
-    past.setDate(today.getDate() - 7);
-
-    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-    // Set standard values
-    document.getElementById('startDate').value = fmt(past);
-    document.getElementById('endDate').value = fmt(today);
-
-    // Attach modern UI calendar pickers
-    flatpickr("#startDate", { defaultDate: fmt(past), dateFormat: "Y-m-d", allowInput: true });
-    flatpickr("#endDate", { defaultDate: fmt(today), dateFormat: "Y-m-d", allowInput: true });
 });
 
 document.getElementById('closeModalBtn').addEventListener('click', () => {
@@ -446,72 +432,24 @@ document.getElementById('closeModalBtn').addEventListener('click', () => {
 
 document.getElementById('executeDownloadBtn').addEventListener('click', () => {
     const statusText = document.getElementById('downloadStatus');
-    const dStart = document.getElementById('startDate').value;
-    const dEnd = document.getElementById('endDate').value;
+    const deviceId = dSelect.value;
 
-    if (!dStart || !dEnd) {
-        alert("시작 날짜와 종료 날짜를 모달창에서 선택해주세요.");
-        return;
-    }
-
-    statusText.textContent = "CSV 파일을 생성하는 중입니다...";
+    statusText.textContent = "가장 최근 생성된 아카이브 파일을 다운로드합니다...";
 
     try {
-        const sTime = new Date(dStart + 'T00:00:00').getTime();
-        const eTime = new Date(dEnd + 'T23:59:59').getTime();
-
-        // Find indices of data points within the selected date range
-        const validIndices = [];
-        dataHistory.labels.forEach((dt, idx) => {
-            const t = dt.getTime();
-            if (t >= sTime && t <= eTime) {
-                validIndices.push(idx);
-            }
-        });
-
-        if (validIndices.length === 0) {
-            statusText.textContent = "❌ 해당 기간에 수집된 데이터가 없습니다.";
-            return;
-        }
-
-        // Prepare CSV Header
-        let csvContent = "Timestamp,Air Temperature,VPD,Relative Humidity,Solar Radiation,Atmospheric Pressure,Precipitation,Lightning Strike Count,Lightning Average Distance,Wind Speed,Wind Direction,Maximum Wind Speed,Tilt,Soil Temperature,Water Content,Saturation Extract EC,Pore Water EC,Battery Percent,Logger Temperature\n";
-
-        // Construct CSV Rows
-        validIndices.forEach(i => {
-            // Note: Currently filling unavailable fields with empty strings to match historical structure
-            // Data structure mapping based on stored history
-            const ts = dtToISOKorean(dataHistory.labels[i]);
-            const temp = dataHistory.temp[i]?.y ?? '';
-            const hum = dataHistory.hum[i]?.y ?? '';
-            const soilTemp = dataHistory.soilTemp[i]?.y ?? '';
-            const water = dataHistory.waterContent[i]?.y ? (dataHistory.waterContent[i].y / 100).toFixed(3) : '';
-            const solar = dataHistory.solar[i]?.y ?? '';
-
-            // Reconstruct pseudo-VPD back from RH for CSV if needed (or leave empty if not strictly tracked in history array)
-            const vpd = '';
-            const ec = '';
-            const battery = '';
-
-            csvContent += `${ts},${temp},${vpd},${hum},${solar},,,,,,,,,${soilTemp},${water},${ec},,${battery},\n`;
-        });
-
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for Excel UTF-8 BOM
-        const url = URL.createObjectURL(blob);
+        const url = `archive_${deviceId}.csv`;
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `ZentraCloud_DashboardData_${dSelect.value}_${dStart}_to_${dEnd}.csv`);
+        link.setAttribute("download", `ZentraCloud_FullArchive_${deviceId}.csv`);
 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-        statusText.textContent = `✅ 다운로드 완료! (${validIndices.length}개 데이터)`;
-
+        statusText.textContent = `✅ 무제한 누적 창고 다운로드 시작!`;
     } catch (e) {
         console.error(e);
-        statusText.textContent = "❌ 다운로드 중 오류가 발생했습니다.";
+        statusText.textContent = "❌ 다운로드 연결 실패.";
     }
 });
 

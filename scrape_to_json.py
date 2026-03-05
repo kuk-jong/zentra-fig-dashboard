@@ -2,6 +2,7 @@ import json
 import os
 import time
 import re
+import csv
 from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 
@@ -141,11 +142,45 @@ def main():
             if len(history_data[dev_id]) > MAX_HISTORY:
                 history_data[dev_id].pop(0)
 
+            # --- Phase 5: Two-Track Append to Persistent CSV Archive ---
+            csv_filename = f"archive_{dev_id}.csv"
+            file_exists = os.path.isfile(csv_filename)
+            
+            with open(csv_filename, 'a', newline='', encoding='utf-8-sig') as csvfile:
+                writer = csv.writer(csvfile)
+                # Write header if new file
+                if not file_exists:
+                    writer.writerow([
+                        "Timestamp", "Air Temperature", "VPD", "Relative Humidity", 
+                        "Solar Radiation", "Atmospheric Pressure", "Precipitation", 
+                        "Lightning Strike Count", "Lightning Average Distance", "Wind Speed", 
+                        "Wind Direction", "Maximum Wind Speed", "Tilt", "Soil Temperature", 
+                        "Water Content", "Saturation Extract EC", "Pore Water EC", 
+                        "Battery Percent", "Logger Temperature"
+                    ])
+                
+                # Write data row mapping matching ZentraCloud historical format
+                water_ratio = (float(water_content) / 100.0) if water_content is not None else ""
+                writer.writerow([
+                    dt_str, 
+                    temp if temp is not None else "",
+                    vpd if vpd is not None else "",
+                    hum if hum is not None else "",
+                    solar if solar is not None else "",
+                    "", "", "", "", "", "", "", "", # Blank fields not tracked
+                    soil_temp if soil_temp is not None else "",
+                    f"{water_ratio:.3f}" if water_ratio != "" else "",
+                    ec if ec is not None else "",
+                    "",
+                    battery if battery is not None else "",
+                    ""
+                ])
+
     # Save to data.json
     with open(DATA_JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(history_data, f, ensure_ascii=False)
     
-    print(f"Successfully saved {len(scraped_data_blocks)} device records to {DATA_JSON_PATH}.")
+    print(f"Successfully saved {len(scraped_data_blocks)} device records to {DATA_JSON_PATH} and appended to CSV archives.")
 
 if __name__ == "__main__":
     main()
