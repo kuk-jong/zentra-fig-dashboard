@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zentra Cloud 무화과 온실 대시보드</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+
+<body>
+    <!-- Login Modal -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box" style="animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div style="font-size: 2rem; margin-bottom: 2rem; color: #1dd1a1; font-weight: 800; letter-spacing: -1px;">
+                Zentra Cloud<br>
+                <span style="font-size: 1rem; color: #9a9cae; font-weight: 500;">Secured Access</span>
+            </div>
+            <input type="password" id="passwordInput" class="custom-input" placeholder="비밀번호를 입력하세요"
+                style="width: 100%; margin-bottom: 1.5rem; text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+            <button id="loginBtn" class="primary-btn" style="width: 100%;">로그인 (Login)</button>
+            <div id="loginError" style="color: #ff6b6b; margin-top: 1rem; font-size: 0.9rem; display: none;">비밀번호가 일치하지
+                않습니다.</div>
+        </div>
+    </div>
+
+    <!-- Dashboard Container (Hidden until login) -->
+    <div class="app-container" id="dashboardContent" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Zentra Cloud</h2>
+                <p>Fig Greenhouse Dashboard</p>
+            </div>
+
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label for="deviceSelect" style="color: #48dbfb; font-size: 0.95rem;">📍 관측 지역 선택</label>
+                    <div class="device-select-wrapper">
+                        <select id="deviceSelect" class="styled-select">
+                            <option value="z6-23134">🎯 해남 무화과 온실 (Z6-23134)</option>
+                            <option value="z6-23133">🎯 영암 무화과 온실 (Z6-23133)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Fetch Button & Date Picker removed from Sidebar -->
+
+
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" id="navDashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="7" height="9" x="3" y="3" rx="1" />
+                            <rect width="7" height="5" x="14" y="3" rx="1" />
+                            <rect width="7" height="9" x="14" y="12" rx="1" />
+                            <rect width="7" height="5" x="3" y="16" rx="1" />
+                        </svg>
+                        대시보드 (Dashboard)
+                    </a>
+                    <a href="#" class="nav-item" id="navDownload">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" x2="12" y1="15" y2="3" />
+                        </svg>
+                        다운로드 (Download)
+                    </a>
+                </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Mobile Sidebar Toggle -->
+            <button id="mobileNavToggle" class="mobile-nav-toggle">☰</button>
+            <header class="top-header">
+                <div>
+                    <h1 id="pageTitle">해남 무화과 (z6-27731) 모니터링</h1>
+                    <p class="subtitle" id="lastUpdated">마지막 업데이트: 대기 중...</p>
+                </div>
+                <div class="header-actions">
+                    <div class="status-badge" id="connStatus">
+                        <span class="status-dot"></span>
+                        Connecting...
+                    </div>
+                </div>
+            </header>
+
+            <div class="kpi-grid">
+                <!-- High/Low Cards -->
+                <div class="kpi-card highlight-card">
+                    <div class="kpi-header"><span class="kpi-title">오늘 최고 기온 (Max Temp)</span></div>
+                    <div class="kpi-value"><span id="valMaxTemp">--</span><span class="kpi-unit">°C</span></div>
+                </div>
+                <div class="kpi-card highlight-card">
+                    <div class="kpi-header"><span class="kpi-title">오늘 최저 기온 (Min Temp)</span></div>
+                    <div class="kpi-value"><span id="valMinTemp">--</span><span class="kpi-unit">°C</span></div>
+                </div>
+
+                <!-- Row 1 -->
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">기온 (Air Temp)</span></div>
+                    <div class="kpi-value"><span id="valTemp">--</span><span class="kpi-unit">°C</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">상대습도 (Humidity)</span></div>
+                    <div class="kpi-value"><span id="valHum">--</span><span class="kpi-unit">% 추정</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">일사량 (Solar Rad)</span></div>
+                    <div class="kpi-value"><span id="valSolar">--</span><span class="kpi-unit">W/m²</span></div>
+                </div>
+                <!-- Row 2 -->
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">PPFD (광량)</span></div>
+                    <div class="kpi-value"><span id="valPpfd">--</span><span class="kpi-unit">µmol/m²/s</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">토양수분 (Water Content)</span></div>
+                    <div class="kpi-value"><span id="valWater">--</span><span class="kpi-unit">m³/m³</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">토양온도 (Soil Temp)</span></div>
+                    <div class="kpi-value"><span id="valSoilTemp">--</span><span class="kpi-unit">°C</span></div>
+                </div>
+                <!-- Row 3 -->
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">EC (Saturation Ext.)</span></div>
+                    <div class="kpi-value"><span id="valEC">--</span><span class="kpi-unit">mS/cm</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">VPD</span></div>
+                    <div class="kpi-value"><span id="valVPD">--</span><span class="kpi-unit">kPa</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header"><span class="kpi-title">배터리 (Battery)</span></div>
+                    <div class="kpi-value"><span id="valBattery">--</span><span class="kpi-unit">%</span></div>
+                </div>
+            </div>
+
+            <!-- Charts Area -->
+            <div class="charts-grid">
+                <div class="chart-container card-panel">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>기온, 상대습도, 토양온도, 토양습도</h3>
+                        <div class="chart-controls" style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="chart1Start" class="chart-date-filter"
+                                style="width: 130px; padding: 0.3rem; font-size: 0.8rem;">
+                            <span style="color:var(--text-secondary)">~</span>
+                            <input type="date" id="chart1End" class="chart-date-filter"
+                                style="width: 130px; padding: 0.3rem; font-size: 0.8rem;">
+                            <button id="btnFilterChart1" class="secondary-btn"
+                                style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">적용</button>
+                        </div>
+                    </div>
+                    <div class="chart-stats" id="statsChart1"
+                        style="display: flex; gap: 15px; margin-bottom: 10px; font-size: 0.85rem; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <span style="color:var(--text-secondary);">표시 기간 대표값: 데이터 없음</span>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="tempHumChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container card-panel">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>일사량, PPFD</h3>
+                        <div class="chart-controls" style="display: flex; gap: 10px; align-items: center;">
+                            <input type="date" id="chart2Start" class="chart-date-filter"
+                                style="width: 130px; padding: 0.3rem; font-size: 0.8rem;">
+                            <span style="color:var(--text-secondary)">~</span>
+                            <input type="date" id="chart2End" class="chart-date-filter"
+                                style="width: 130px; padding: 0.3rem; font-size: 0.8rem;">
+                            <button id="btnFilterChart2" class="secondary-btn"
+                                style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">적용</button>
+                        </div>
+                    </div>
+                    <div class="chart-stats" id="statsChart2"
+                        style="display: flex; gap: 15px; margin-bottom: 10px; font-size: 0.85rem; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <span style="color:var(--text-secondary);">표시 기간 대표값: 데이터 없음</span>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="solarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <h2>데이터를 불러오는 중입니다...</h2>
+                <p id="loadingMsg">Zentra Cloud API 서버에 연결 중...</p>
+                <!-- Progress bar for long fetches -->
+                <div class="progress-container" style="display: none;" id="progressContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+        </main>
+    </div> <!-- /Dashboard Container -->
+
+    <!-- Download Modal -->
+    <div id="downloadModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="close-btn" id="closeModalBtn">&times;</button>
+            <h2 style="margin-bottom: 20px; text-align: center;">Downloads</h2>
+
+            <div class="modal-body">
+                <div class="control-group">
+                    <label>포맷 선택 (Format)</label>
+                    <div class="format-toggle">
+                        <button class="format-btn active">CSV</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>다운로드 기간설정 (Date Range)</label>
+                    <div class="date-picker-group"
+                        style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                        <input type="date" id="startDate" class="custom-input">
+                        <span>~</span>
+                        <input type="date" id="endDate" class="custom-input">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>데이터 범위 (Data Scope)</label>
+                    <select id="downloadScope">
+                        <option value="dashboard">선택된 기기의 설정 기간 전체 다운로드 (ZentraCloud 직접 접송)</option>
+                    </select>
+                </div>
+
+                <button id="executeDownloadBtn" class="primary-btn"
+                    style="width: 100%; margin-top: 15px; font-weight: bold;">Download</button>
+                <p id="downloadStatus"
+                    style="text-align: center; margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
