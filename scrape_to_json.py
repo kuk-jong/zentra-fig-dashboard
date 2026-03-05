@@ -84,6 +84,7 @@ def main():
                 mapped_id = DEVICE_MAP[real_id]
                 scraped_data_blocks[mapped_id] = text
 
+        page.screenshot(path="debug_github.png")
         browser.close()
 
     if not scraped_data_blocks:

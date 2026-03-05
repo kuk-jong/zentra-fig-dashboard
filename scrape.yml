@@ -1,0 +1,52 @@
+name: Scrape ZentraCloud Data
+
+on:
+  schedule:
+    # Runs every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    # Allows manual triggering from the GitHub Actions UI
+
+jobs:
+  scrape-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install chromium
+
+      - name: Run Scraper Script
+        env:
+          ZENTRA_EMAIL: ${{ secrets.ZENTRA_EMAIL }}
+          ZENTRA_PASSWORD: ${{ secrets.ZENTRA_PASSWORD }}
+        run: python scrape_to_json.py
+
+      - name: Upload Debug Screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: debug_github.png
+          retention-days: 1
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data.json
+          # Do not fail the workflow if there's nothing new to commit
+          git commit -m "Auto-update data.json from ZentraCloud [skip ci]" || echo "No changes to commit"
+          git push
