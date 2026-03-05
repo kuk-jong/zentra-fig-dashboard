@@ -61,10 +61,11 @@ const MAX_DATA_POINTS = 600;
 
 let pollingTimer = null;
 
-function calculateRH(t, vp) {
-    if (t === null || vp === null || t === undefined || vp === undefined) return null;
-    const es = 0.611 * Math.exp((17.502 * t) / (t + 240.97));
-    return Math.min(Math.max((vp / es) * 100, 0), 100);
+function calculateRH(t, vpd) {
+    if (t === null || vpd === null || t === undefined || vpd === undefined) return null;
+    const es = 0.611 * Math.exp((17.502 * t) / (t + 240.97)); // Saturation Vapor Pressure (kPa)
+    const ea = es - vpd; // Actual Vapor Pressure (ea) = Saturation Vapor Pressure (es) - Vapor Pressure Deficit (VPD)
+    return Math.min(Math.max((ea / es) * 100, 0), 100);
 }
 
 function handleLogin() {
