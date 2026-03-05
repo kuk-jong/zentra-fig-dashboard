@@ -92,12 +92,11 @@ def main():
         print("No valid target devices found during scrape. Exiting.")
         return
 
-    now_ts = int(time.time())
-    
-    # GitHub Actions servers use UTC. Add 9 hours for KST.
-    kst_time = datetime.fromtimestamp(now_ts) + timedelta(hours=9)
+    # Get strict UTC time and add 9 hours for KST
+    now_utc = datetime.utcnow()
+    kst_time = now_utc + timedelta(hours=9)
     dt_str = kst_time.strftime("%Y-%m-%d %H:%M:%S")
-
+    now_ts = int(kst_time.timestamp()) # Save the KST aligned timestamp for frontend filtering
     # Process and append data
     for dev_id, block in scraped_data_blocks.items():
         if dev_id not in history_data:
