@@ -92,11 +92,11 @@ def main():
         print("No valid target devices found during scrape. Exiting.")
         return
 
-    # Get strict UTC time and add 9 hours for KST
+    # Get strict real-world UTC epoch, and explicitly format KST time string
+    now_ts = int(time.time())
     now_utc = datetime.utcnow()
     kst_time = now_utc + timedelta(hours=9)
     dt_str = kst_time.strftime("%Y-%m-%d %H:%M:%S")
-    now_ts = int(kst_time.timestamp()) # Save the KST aligned timestamp for frontend filtering
     # Process and append data
     for dev_id, block in scraped_data_blocks.items():
         if dev_id not in history_data:
@@ -129,8 +129,14 @@ def main():
             "battery": battery if battery is not None else 0
         }
 
+        # Heal from previous future-timestamp bug (purge data points from the future)
+        if history_data[dev_id]:
+            history_data[dev_id] = [d for d in history_data[dev_id] if d["timestamp_utc"] <= now_ts + 60]
+            
+        last_ts = history_data[dev_id][-1]["timestamp_utc"] if history_data[dev_id] else 0
+
         # Prevent duplicate entries within the same minute
-        if not history_data[dev_id] or history_data[dev_id][-1]["timestamp_utc"] < now_ts - 60:
+        if last_ts < now_ts - 60:
             history_data[dev_id].append({
                 "timestamp_utc": now_ts,
                 "datetime": dt_str,
