@@ -63,7 +63,7 @@ def main():
             print("Could not click list button natively:", e)
             page.goto("https://zentracloud.com/#/dashboard_list")
 
-        # 3. 데이터 로딩을 위해 또 15초 대기
+        # 3. 데이터 로딩을 위해 또 15초 결제 대기
         print("Waiting 15s for devices to load...")
         page.wait_for_timeout(15000)
 
