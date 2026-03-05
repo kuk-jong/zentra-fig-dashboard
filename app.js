@@ -444,7 +444,7 @@ document.getElementById('closeModalBtn').addEventListener('click', () => {
     modal.style.display = 'none';
 });
 
-document.getElementById('executeDownloadBtn').addEventListener('click', async () => {
+document.getElementById('executeDownloadBtn').addEventListener('click', () => {
     const statusText = document.getElementById('downloadStatus');
     const dStart = document.getElementById('startDate').value;
     const dEnd = document.getElementById('endDate').value;
@@ -454,51 +454,71 @@ document.getElementById('executeDownloadBtn').addEventListener('click', async ()
         return;
     }
 
-    statusText.textContent = "백그라운드에서 ZentraCloud 자동 로그인을 진행 중입니다. (수 분이 소요될 수 있습니다...)";
+    statusText.textContent = "CSV 파일을 생성하는 중입니다...";
 
     try {
-        const response = await fetch(`${LOCAL_API}/download_zentra`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                device_id: dSelect.value,
-                start_date: dStart,
-                end_date: dEnd
-            })
+        const sTime = new Date(dStart + 'T00:00:00').getTime();
+        const eTime = new Date(dEnd + 'T23:59:59').getTime();
+
+        // Find indices of data points within the selected date range
+        const validIndices = [];
+        dataHistory.labels.forEach((dt, idx) => {
+            const t = dt.getTime();
+            if (t >= sTime && t <= eTime) {
+                validIndices.push(idx);
+            }
         });
 
-        if (!response.ok) throw new Error("서버 에러");
-
-        const blob = await response.blob();
-
-        // Extract filename from Content-Disposition header if possible
-        let filename = `ZentraCloud_Automated_${dSelect.value}.csv`;
-        const disposition = response.headers.get('Content-Disposition');
-        if (disposition && disposition.indexOf('attachment') !== -1) {
-            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
-            if (matches != null && matches[1]) {
-                filename = matches[1].replace(/['"]/g, '');
-            }
+        if (validIndices.length === 0) {
+            statusText.textContent = "❌ 해당 기간에 수집된 데이터가 없습니다.";
+            return;
         }
 
+        // Prepare CSV Header
+        let csvContent = "Timestamp,Air Temperature,VPD,Relative Humidity,Solar Radiation,Atmospheric Pressure,Precipitation,Lightning Strike Count,Lightning Average Distance,Wind Speed,Wind Direction,Maximum Wind Speed,Tilt,Soil Temperature,Water Content,Saturation Extract EC,Pore Water EC,Battery Percent,Logger Temperature\n";
+
+        // Construct CSV Rows
+        validIndices.forEach(i => {
+            // Note: Currently filling unavailable fields with empty strings to match historical structure
+            // Data structure mapping based on stored history
+            const ts = dtToISOKorean(dataHistory.labels[i]);
+            const temp = dataHistory.temp[i]?.y ?? '';
+            const hum = dataHistory.hum[i]?.y ?? '';
+            const soilTemp = dataHistory.soilTemp[i]?.y ?? '';
+            const water = dataHistory.waterContent[i]?.y ? (dataHistory.waterContent[i].y / 100).toFixed(3) : '';
+            const solar = dataHistory.solar[i]?.y ?? '';
+
+            // Reconstruct pseudo-VPD back from RH for CSV if needed (or leave empty if not strictly tracked in history array)
+            const vpd = '';
+            const ec = '';
+            const battery = '';
+
+            csvContent += `${ts},${temp},${vpd},${hum},${solar},,,,,,,,,${soilTemp},${water},${ec},,${battery},\n`;
+        });
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for Excel UTF-8 BOM
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", filename);
+        link.setAttribute("download", `ZentraCloud_DashboardData_${dSelect.value}_${dStart}_to_${dEnd}.csv`);
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
         setTimeout(() => URL.revokeObjectURL(url), 100);
-        statusText.textContent = "✅ 자동화 다운로드가 완료되었습니다!";
+        statusText.textContent = `✅ 다운로드 완료! (${validIndices.length}개 데이터)`;
 
     } catch (e) {
         console.error(e);
-        statusText.textContent = "❌ 다운로드 로컬 서버 요청 실패.";
+        statusText.textContent = "❌ 다운로드 중 오류가 발생했습니다.";
     }
 });
+
+function dtToISOKorean(dt) {
+    const pad = n => n < 10 ? '0' + n : n;
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+}
 
 // Init Filter Pickers and Buttons
 document.addEventListener('DOMContentLoaded', () => {
